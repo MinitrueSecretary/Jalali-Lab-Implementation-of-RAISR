@@ -1,5 +1,4 @@
 import cv2
-from scipy.misc import imresize
 from scipy.signal import convolve2d
 import numpy as np
 from math import atan2, floor, pi, ceil, isnan
@@ -102,11 +101,17 @@ def modcrop(im,modulo):
 def Prepare(im, patchSize, R):
     patchMargin = floor(patchSize/2)
     H, W = im.shape
-    imL = imresize(im, 1 / R, interp='bicubic')
+
+    # use opencv to resize the image
+    imL = cv2.resize(im, (W//R, H//R), interpolation=cv2.INTER_CUBIC)
+
     # cv2.imwrite('Compressed.jpg', imL, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
     # imL = cv2.imread('Compressed.jpg')
     # imL = imL[:,:,0]   # Optional: Compress the image
-    imL = imresize(imL, (H, W), interp='bicubic')
+
+    # use opencv to resize the image
+    imL = cv2.resize(imL, (W, H), interpolation=cv2.INTER_CUBIC)
+
     imL = im2double(imL)
     im_LR = imL
     return im_LR
@@ -222,9 +227,11 @@ def Backprojection(LR, HR, maxIter):
     w = w**2
     w = w/sum(np.ravel(w))
     for i in range(maxIter):
-        im_L = imresize(HR, (H, W), interp='bicubic', mode='F')
+        im_L = cv2.resize(HR, (W, H), interpolation=cv2.INTER_CUBIC)
+
         imd = LR - im_L
-        im_d = imresize(imd, (H1, W1), interp='bicubic', mode='F')
+        im_d = cv2.resize(imd, (W1, H1), interpolation=cv2.INTER_CUBIC)
+
         HR = HR + convolve2d(im_d, w, 'same')
     return HR
 
@@ -372,7 +379,7 @@ def TrainProcess (im_LR, im_HR, im_GX, im_GY,patchSize, w, Qangle, Qstrength,Qco
             patch = im_LR[idx1]
             patchX = im_GX[idx1]
             patchY = im_GY[idx1]
-            theta,lamda,u=HashTable(patchX, patchY, w, Qangle, Qstrength,Qcoherence, stre, cohe)
+            theta,lamda,u = HashTable(patchX, patchY, w, Qangle, Qstrength,Qcoherence, stre, cohe)
             patch1 = patch.ravel()
             patchL = patch1.reshape((1,patch1.size))
             t = (i1 % R) * R +(j1 % R)
