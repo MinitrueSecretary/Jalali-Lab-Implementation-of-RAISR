@@ -44,7 +44,6 @@ More information about the technique can be found in our group website: http://w
 """
 
 import numpy as np
-import numba as nb
 import os
 import cv2
 import pickle
