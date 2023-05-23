@@ -109,8 +109,9 @@ venv.bak/
 Qfactor_str2
 filter2
 Qfactor_coh2
-results/img_001_SRF_2_HR_result.bmp
-results/img_002_SRF_2_HR_result.bmp
-results/img_003_SRF_2_HR_result.bmp
-results/img_004_SRF_2_HR_result.bmp
-results/img_005_SRF_2_HR_result.bmp
+results/
+trainingData/
+testData/
+DicomFiles/
+evalData/
+evalResult/

@@ -39,24 +39,41 @@ from Functions import *
 import matplotlib.image as mpimg
 from multiprocessing import Pool
 
+from pydicom import dcmread
+from pydicom.dataset import Dataset, FileDataset
 warnings.filterwarnings('ignore')
 
-testPath = 'testData'
+def image_dist(image):
+    return image.mean((0,1)),image.std((0,1))
 
-R = 2  # Upscaling factor=2 R = [ 2 3 4 ]
+def rescale_image(image, target_mean, target_std):
+
+    channel_means = np.mean(image, axis=(0, 1))  # Compute mean for each channel
+    channel_stds = np.std(image, axis=(0, 1))  # Compute standard deviation for each channel
+    rescaled_image = (image - channel_means) / channel_stds  # Standardize the image
+
+    # Rescale each channel to the target mean and standard deviation
+    for channel in range(3):  # Iterate over the three channels (R, G, B)
+        rescaled_image[:, :, channel] = rescaled_image[:, :, channel] * target_std[channel] + target_mean[channel]
+
+    return rescaled_image
+
+testPath = 'testData'
+filterpath = 'myfilter'
+R = 4  # Upscaling factor=2 R = [ 2 3 4 ]
 patchSize = 11  # Pacth Size=11
 gradientSize = 9
 Qangle = 24  # Quantization factor of angle =24
 Qstrength = 3  # Quantization factor of strength =3
 Qcoherence = 3  # Quantization factor of coherence =3
 
-with open("Filters/filter"+str(R), "rb") as fp:
+with open(f"{filterpath}/filter"+str(R), "rb") as fp:
     h = pickle.load(fp)
 
-with open("Filters/Qfactor_str"+str(R), "rb") as sp:
+with open(f"{filterpath}/Qfactor_str"+str(R), "rb") as sp:
     stre = pickle.load(sp)
 
-with open("Filters/Qfactor_coh"+str(R), "rb") as cp:
+with open(f"{filterpath}/Qfactor_coh"+str(R), "rb") as cp:
     cohe = pickle.load(cp)
 
 filelist = make_dataset(testPath)
@@ -113,16 +130,21 @@ def TestProcess(i):
     return result
 
 
+
 print('Begin to process images:')
 for image in filelist:
     print('\r', end='')
     print('' * 60, end='')
     print('\r Processing ' + str(imagecount) + '/' + str(len(filelist)) + ' image (' + image + ')')
-    im_uint8 = cv2.imread(image)
-    im_mp = mpimg.imread(image)
-    if len(im_mp.shape) == 2:
-        im_uint8 = im_uint8[:,:,0]
+
+    if image.endswith('.dcm'):
+        im_uint8 = dcmread(image).pixel_array
+    else:
+        im_uint8 = cv2.imread(image)
+
     im_uint8 = modcrop(im_uint8, R)
+    # get mean and std with image_dist
+    # image_mean, image_std = image_dist(im_uint8)
     if len(im_uint8.shape) > 2:
         im_ycbcr = BGR2YCbCr(im_uint8)
         im = im_ycbcr[:, :, 0]
@@ -199,9 +221,14 @@ for image in filelist:
     PSNR_result = psnr(im[region], im_result[region])
     PSNR_blending = psnr(im[region], im_blending[region])
     PSNR_blending = max(PSNR_result, PSNR_blending)
-
-    createFolder('./results/')
-    cv2.imwrite('results/' + os.path.splitext(os.path.basename(image))[0] + '_result.bmp', result_RAISR)
+    # createFolder('./results/')
+    if image.endswith('.dcm'):
+        # save the file as dicom
+        dcm = dcmread(image)
+        dcm.PixelData = result_RAISR.tobytes()
+        dcm.save_as('results/' + os.path.splitext(os.path.basename(image))[0] + '_result.dcm')
+    else:
+        cv2.imwrite('results/' + os.path.splitext(os.path.basename(image))[0] + '_result.png', result_RAISR)
     psnrRAISR.append(PSNR_result)
     psnrBicubic.append(PSNR_bicubic)
     psnrBlending.append(PSNR_blending)
@@ -211,10 +238,12 @@ for image in filelist:
 
 RAISR_psnrmean = np.array(psnrBlending).mean()
 Bicubic_psnrmean = np.array(psnrBicubic).mean()
+Blending_psnrmean = np.array(psnrBlending).mean()
 
 
 print('\r', end='')
 print('' * 60, end='')
 print('\r RAISR PSNR of '+ testPath +' is ' + str(RAISR_psnrmean))
 print('\r Bicubic PSNR of '+ testPath +' is ' + str(Bicubic_psnrmean))
+print('\r Blending PSNR of '+ testPath +' is ' + str(Blending_psnrmean))
 

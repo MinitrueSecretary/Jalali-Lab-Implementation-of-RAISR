@@ -53,7 +53,7 @@ from Functions import *
 
 trainPath = 'trainingData'
 
-R = 2                           # Upscaling factor=2
+R = 4                          # Upscaling factor=2
 patchSize = 11                  # Pacth Size=11
 gradientSize = 9                # Gradient Size = 9
 Qangle = 24                     # Quantization factor of angle =24
@@ -160,13 +160,13 @@ for t in range(R*R):
                 h[t,j] = np.linalg.inv(Q[t,j]).dot(V[t,j])         # Eq.2
                 break
 
-with open("filter"+str(R), "wb") as fp:
+with open("myfilter/filter"+str(R), "wb") as fp:
     pickle.dump(h, fp)
 
-with open("Qfactor_str"+str(R), "wb") as sp:
+with open("myfilter/Qfactor_str"+str(R), "wb") as sp:
     pickle.dump(stre, sp)
 
-with open("Qfactor_coh"+str(R), "wb") as cp:
+with open("myfilter/Qfactor_coh"+str(R), "wb") as cp:
     pickle.dump(cohe, cp)
 
 
